@@ -42,8 +42,7 @@ async def on_ready():
 # Liga o servidor web e depois o bot
 keep_alive()
 
-# Apague a linha que tinha "os.environ.get" e coloque o seu token direto aqui dentro das aspas:
-TOKEN = "MTUzMTg3NDA5NzM4NDkxNTAzNQ.G08-LO.UKopmXCQPUPAhqH_vhyrB2zquU7AFZU3WNxhKE"
-
+TOKEN = os.environ.get("DISCORD_TOKEN")
 bot.run(TOKEN)
+
 
