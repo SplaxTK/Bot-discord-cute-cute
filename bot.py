@@ -446,5 +446,9 @@ async def eventos(ctx, member: discord.Member = None):
 # INICIAR BOT
 # ============================================
 
-# Cole o TOKEN do seu bot entre as aspas
-bot.run("MTUzMTg3NDA5NzM4NDkxNTAzNQ.GtQD0w.YtdTolOhPxtG645cni-R-p2gNUhjWBttqIzZ2M")
+# Use o TOKEN definido na variável de ambiente DISCORD_TOKEN
+TOKEN = os.environ.get("DISCORD_TOKEN")
+if not TOKEN:
+    raise RuntimeError("A variável de ambiente DISCORD_TOKEN não está definida.")
+
+bot.run(TOKEN)
