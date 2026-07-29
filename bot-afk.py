@@ -23,6 +23,7 @@ def keep_alive():
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # COLOQUE O ID DO SEU CANAL DE VOZ AQUI ou deixe None para usar o comando !join
@@ -71,6 +72,14 @@ async def on_ready():
     if voice_check_task is None:
         voice_check_task = bot.loop.create_task(voice_watchdog())
     if voice_channel_id:
+        await connect_to_voice(voice_channel_id)
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if member.id != bot.user.id:
+        return
+    if before.channel is not None and after.channel is None and voice_channel_id:
+        await asyncio.sleep(5)
         await connect_to_voice(voice_channel_id)
 
 @bot.command(name="join")
