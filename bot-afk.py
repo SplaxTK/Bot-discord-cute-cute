@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 from flask import Flask
@@ -12,7 +13,6 @@ def home():
     return "Bot Online 24/7!"
 
 def run():
-    # O Render fornece a porta automaticamente na variável de ambiente PORT
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -25,24 +25,83 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# COLOQUE O ID DO SEU CANAL DE VOZ AQUI
-ID_DO_CANAL_DE_VOZ = 1238513896357232675  
+# COLOQUE O ID DO SEU CANAL DE VOZ AQUI ou deixe None para usar o comando !join
+DEFAULT_VOICE_CHANNEL_ID = 1238513896357232675
+voice_channel_id = DEFAULT_VOICE_CHANNEL_ID
+voice_check_task = None
+
+async def connect_to_voice(channel_id: int):
+    try:
+        channel = await bot.fetch_channel(channel_id)
+        if not channel or not isinstance(channel, discord.VoiceChannel):
+            return False
+        if bot.voice_clients:
+            voice_client = bot.voice_clients[0]
+            if voice_client.channel.id == channel.id and voice_client.is_connected():
+                return True
+            await voice_client.move_to(channel)
+        else:
+            await channel.connect()
+        print(f"Conectado com sucesso ao canal: {channel.name}")
+        return True
+    except Exception as e:
+        print(f"Erro ao conectar ao canal de voz: {e}")
+        return False
+
+async def disconnect_voice():
+    if bot.voice_clients:
+        voice_client = bot.voice_clients[0]
+        if voice_client.is_connected():
+            await voice_client.disconnect()
+            return True
+    return False
+
+async def voice_watchdog():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        if voice_channel_id:
+            if not bot.voice_clients or not bot.voice_clients[0].is_connected():
+                await connect_to_voice(voice_channel_id)
+        await asyncio.sleep(30)
 
 @bot.event
 async def on_ready():
+    global voice_check_task
     print(f"Bot {bot.user.name} está online na nuvem!")
-    try:
-        channel = await bot.fetch_channel(ID_DO_CANAL_DE_VOZ)
-        if channel and isinstance(channel, discord.VoiceChannel):
-            await channel.connect()
-            print(f"Conectado com sucesso ao canal: {channel.name}")
-    except Exception as e:
-        print(f"Erro ao conectar: {e}")
+    if voice_check_task is None:
+        voice_check_task = bot.loop.create_task(voice_watchdog())
+    if voice_channel_id:
+        await connect_to_voice(voice_channel_id)
 
-# Liga o servidor web e depois o bot
+@bot.command(name="join")
+async def join(ctx):
+    if not ctx.author.voice or not ctx.author.voice.channel:
+        await ctx.send("Você precisa estar em um canal de voz para usar este comando.")
+        return
+    channel = ctx.author.voice.channel
+    success = await connect_to_voice(channel.id)
+    if success:
+        global voice_channel_id
+        voice_channel_id = channel.id
+        await ctx.send(f"Entrei no canal de voz: {channel.name}")
+    else:
+        await ctx.send("Não consegui entrar no canal de voz.")
+
+@bot.command(name="leave")
+async def leave(ctx):
+    if await disconnect_voice():
+        global voice_channel_id
+        voice_channel_id = None
+        await ctx.send("Saí do canal de voz.")
+    else:
+        await ctx.send("Não estou em nenhum canal de voz agora.")
+
 keep_alive()
 
 TOKEN = os.environ.get("DISCORD_TOKEN")
+if not TOKEN:
+    raise RuntimeError("A variável de ambiente DISCORD_TOKEN não está definida.")
+
 bot.run(TOKEN)
 
 
