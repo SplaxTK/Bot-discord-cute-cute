@@ -42,7 +42,8 @@ async def on_ready():
 # Liga o servidor web e depois o bot
 keep_alive()
 
-# ATENÇÃO: NÃO COLOQUE O SEU TOKEN REAL AQUI! 
-# Vamos esconder o Token no Render por segurança para não ser roubado no GitHub.
-TOKEN = os.environ.get("DISCORD_TOKEN")
+# Apague a linha que tinha "os.environ.get" e coloque o seu token direto aqui dentro das aspas:
+TOKEN = "MTUzMTg3NDA5NzM4NDkxNTAzNQ.GZohfz.doIS1dEZNhwVjtZTBljiDaEZHl9YRXVTbsKAXA"
+
 bot.run(TOKEN)
+
