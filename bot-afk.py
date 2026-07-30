@@ -24,10 +24,10 @@ def keep_alive():
 intents = discord.Intents.default()
 intents.message_content = True
 intents.voice_states = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix=">//<!", intents=intents)
 
 # COLOQUE O ID DO SEU CANAL DE VOZ AQUI ou deixe None para usar o comando !join
-DEFAULT_VOICE_CHANNEL_ID = 1238513896357232675
+DEFAULT_VOICE_CHANNEL_ID = None
 voice_channel_id = DEFAULT_VOICE_CHANNEL_ID
 voice_check_task = None
 
@@ -36,13 +36,15 @@ async def connect_to_voice(channel_id: int):
         channel = await bot.fetch_channel(channel_id)
         if not channel or not isinstance(channel, discord.VoiceChannel):
             return False
+
         if bot.voice_clients:
             voice_client = bot.voice_clients[0]
             if voice_client.channel.id == channel.id and voice_client.is_connected():
                 return True
-            await voice_client.move_to(channel)
-        else:
-            await channel.connect()
+            if voice_client.is_connected():
+                await voice_client.disconnect()
+
+        await channel.connect()
         print(f"Conectado com sucesso ao canal: {channel.name}")
         return True
     except Exception as e:
@@ -61,9 +63,15 @@ async def voice_watchdog():
     await bot.wait_until_ready()
     while not bot.is_closed():
         if voice_channel_id:
-            if not bot.voice_clients or not bot.voice_clients[0].is_connected():
-                await connect_to_voice(voice_channel_id)
-        await asyncio.sleep(30)
+            try:
+                connected = bot.voice_clients and bot.voice_clients[0].is_connected()
+                print(f"[watchdog] voice_channel_id={voice_channel_id}, connected={connected}")
+                if not connected:
+                    print("[watchdog] tentando reconectar à call...")
+                    await connect_to_voice(voice_channel_id)
+            except Exception as e:
+                print(f"Watchdog erro: {e}")
+        await asyncio.sleep(15)
 
 @bot.event
 async def on_ready():
@@ -80,6 +88,11 @@ async def on_voice_state_update(member, before, after):
         return
     if before.channel is not None and after.channel is None and voice_channel_id:
         await asyncio.sleep(5)
+        await connect_to_voice(voice_channel_id)
+
+@bot.event
+async def on_guild_available(guild):
+    if voice_channel_id:
         await connect_to_voice(voice_channel_id)
 
 @bot.command(name="join")
