@@ -109,8 +109,8 @@ async def join(ctx):
     else:
         await ctx.send("Não consegui entrar no canal de voz.")
 
-@bot.command(name="sdown")
-async def sdown(ctx):
+@bot.command(name="leave")
+async def leave(ctx):
     if await disconnect_voice():
         global voice_channel_id
         voice_channel_id = None
